@@ -3,6 +3,29 @@
 All notable changes to this module. Versions follow semantic versioning;
 before v1 the API may change in minor versions.
 
+## v0.2.0 (2026-10-11)
+
+Needs github.com/cB-Sigma/sunspec v0.2.0. Backwards compatible with
+v0.1.0.
+
+- Every model: `Build` lays out any of the 112 described models from
+  named raw values, groups nested to any depth included (count points
+  set from the lists); `Image.Add` appends it with its writable points;
+  `Example` gives made-up values for any model; `AllModels` holds every
+  model in one map. `NotImplemented` lays out nested groups through
+  `Build` (a group counted by a point now gets that point set).
+- Faults: `AddFault` and `ClearFaults` make the device answer with any
+  Modbus exception, late, or not at all, by address range, read or write,
+  unit and number of requests.
+- Transports: `StartOptions` serves Modbus TCP over TLS with client
+  certificates and Modbus RTU framing over TCP; `NewDevice` and
+  `ServeRTU` serve RTU on any byte stream; `URL` gives the matching
+  scheme. The Modbus library's log output is discarded.
+- `cmd/sunspecsim`: `-models all` or a list, `-rtu`, `-tls-cert`,
+  `-tls-key`, `-tls-ca`.
+- Interop: pysunspec2 1.3.6 reads every model from the simulator and
+  writes nested curve points to it.
+
 ## v0.1.0 (2026-10-11)
 
 First release, split out of the sunspec module (SigmaM2M, a oneM2M

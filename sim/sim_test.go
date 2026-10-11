@@ -170,7 +170,8 @@ func TestStartAndClose(t *testing.T) {
 }
 
 // Every point of a NotImplemented model holds its type's not-implemented
-// value, so a decoder finds nothing in it.
+// value, so a decoder finds nothing in it but the count points of the
+// repeating groups asked for.
 func TestNotImplemented(t *testing.T) {
 	for _, id := range sunspec.Known() {
 		def := sunspec.Lookup(id)
@@ -178,11 +179,17 @@ func TestNotImplemented(t *testing.T) {
 		if def.Len > 0 && len(data) != def.Len {
 			t.Errorf("model %d: %d registers, want %d", id, len(data), def.Len)
 		}
-		if got := sunspec.Decode(sunspec.Instance{ID: id, L: len(data), Def: def}, data); len(got) != 0 {
-			var names []string
-			for _, v := range got {
+		counts := map[string]bool{}
+		for _, g := range def.Groups {
+			counts[g.CountPoint] = g.CountPoint != ""
+		}
+		var names []string
+		for _, v := range sunspec.Decode(sunspec.Instance{ID: id, L: len(data), Def: def}, data) {
+			if !counts[v.Name] || v.V != 2.0 {
 				names = append(names, fmt.Sprintf("%s=%v", v.Name, v.V))
 			}
+		}
+		if len(names) > 0 {
 			t.Errorf("model %d: decoded %v", id, names)
 		}
 	}

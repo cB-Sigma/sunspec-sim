@@ -22,14 +22,22 @@ sunspec module. No code was ported or copied from another implementation.
   type's not-implemented value from the sunspec tables, the demo uses it,
   and `TestNotImplemented` and `TestDemoNotImplementedPoints` guard it.
 
+- v0.2.0 (2026-10-11), written for this module: `sim/build.go` (`Build`,
+  `Add`, `Example`, `AllModels`), the faults, the TLS and RTU serving in
+  `sim/sim.go` (the Device part rewritten around one request path for
+  both framings), the new command flags, and their tests;
+  `NotImplemented` now lays models out through `Build`.
+
 ## Sources
 
 | Area (files) | Followed |
 |---|---|
 | Register map layout (sim/sim.go, sim/demo.go) | SunSpec Device Information Model Specification v1.2, section 6 (the marker, base addresses, model header, end model) |
 | Point layout and not-implemented values (sim/demo.go, sim/notimpl.go) | The SunSpec model definitions, through the tables of github.com/cB-Sigma/sunspec (see NOTICE) |
-| Exceptions (sim/sim.go) | The Modbus application protocol's exception codes 1, 2 and 11 |
-| Modbus TCP server | github.com/simonvetter/modbus |
+| Point layout of every model, nested groups (sim/build.go) | The SunSpec model definitions, through the tables of github.com/cB-Sigma/sunspec; values encoded by its `EncodePoint` |
+| Exceptions and faults (sim/sim.go) | The Modbus application protocol's exception codes 1 to 6, 8, 10 and 11 |
+| RTU framing (sim/sim.go) | The Modbus over serial line framing: request lengths per function, CRC-16 (polynomial 0xA001, low byte first) |
+| Modbus TCP and TLS server | github.com/simonvetter/modbus |
 
 No specification text is included; comments cite sections in our own
 words.
@@ -42,8 +50,9 @@ words.
   definitions, using a real manufacturer's name and model name as text
   only; the serial number and register values are made up.
 - `sim/` tests, the runner's tests and `interop/`: values written for the
-  tests; the made-up models numbered 64000 and above are not SunSpec
-  models.
+  tests; the vendor model 64900 of the demo is made up and is not a
+  SunSpec model. `Example` and `AllModels` fill every model with made-up
+  values. The TLS certificates in the tests are generated while they run.
 
 ## Requirement IDs
 

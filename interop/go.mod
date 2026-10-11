@@ -5,7 +5,7 @@ go 1.22
 replace github.com/cB-Sigma/sunspec-sim => ../
 
 require (
-	github.com/cB-Sigma/sunspec v0.1.0
+	github.com/cB-Sigma/sunspec v0.2.0
 	github.com/cB-Sigma/sunspec-sim v0.0.0
 )
 

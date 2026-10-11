@@ -16,26 +16,19 @@ import (
 // and addresses, NaN for floats), ready to have the points a device
 // implements set over it. A model with repeating groups gets its fixed
 // part and then repeats[i] occurrences of its i-th repeating group (none
-// when not given); groups that occur once are always included. It returns
-// nil for a model the tables do not describe.
+// when not given; a group counted by a point gets that point set to the
+// number, and nested repeating groups get none); groups that occur once
+// are always included. Build lays out values of nested groups. It
+// returns nil for a model the tables do not describe.
 func NotImplemented(id int, repeats ...int) []uint16 {
 	def := sunspec.Lookup(id)
 	if def == nil {
 		return nil
 	}
-	n := def.Len
-	if n == 0 {
-		n = def.Fixed
-	}
-	out := make([]uint16, n)
-	fill(out, 0, def.Points)
+	values := map[string]any{}
 	r := 0
 	for _, g := range def.Groups {
 		if g.Count == 1 {
-			if g.Offset+g.Len > len(out) {
-				out = append(out, make([]uint16, g.Offset+g.Len-len(out))...)
-			}
-			fill(out, g.Offset, g.Points)
 			continue
 		}
 		k := 0
@@ -43,11 +36,14 @@ func NotImplemented(id int, repeats ...int) []uint16 {
 			k = repeats[r]
 		}
 		r++
-		for range k {
-			occ := make([]uint16, g.Len)
-			fill(occ, 0, g.Points)
-			out = append(out, occ...)
+		if g.Count > 1 {
+			continue // a fixed number of occurrences
 		}
+		values[g.Name] = make([]map[string]any, k)
+	}
+	out, _, err := Build(id, values)
+	if err != nil {
+		return nil
 	}
 	return out
 }

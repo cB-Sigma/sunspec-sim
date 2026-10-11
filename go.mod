@@ -3,7 +3,7 @@ module github.com/cB-Sigma/sunspec-sim
 go 1.22
 
 require (
-	github.com/cB-Sigma/sunspec v0.1.0
+	github.com/cB-Sigma/sunspec v0.2.0
 	github.com/simonvetter/modbus v1.6.4
 )
 

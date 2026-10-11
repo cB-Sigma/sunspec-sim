@@ -13,8 +13,9 @@ the copyright line above covers it. Files added for this module carry
 SunSpec model definitions
 -------------------------
 
-The simulator holds no model definitions of its own: NotImplemented and
-the tests take point offsets and types from the tables of
+The simulator holds no model definitions of its own: Build, Example,
+AllModels, NotImplemented and the tests take point offsets and types
+from the tables of
 github.com/cB-Sigma/sunspec, which are derived from the SunSpec
 Alliance's model definitions (github.com/sunspec/models, commit
 90b4a331dcca1d6eac69c1bead952fddcc5852e0, Apache License 2.0); the
@@ -39,7 +40,8 @@ github.com/cB-Sigma/sunspec (Apache-2.0, Copyright 2026 Abhinav Gautam)
 
 github.com/simonvetter/modbus v1.6.4
   MIT License, Copyright (c) 2019 Simon Vetter
-  The Modbus TCP server the simulator runs on.
+  The Modbus TCP and TLS server the simulator runs on (RTU framing is
+  the simulator's own).
 
 github.com/goburrow/serial v0.1.0 (required by simonvetter/modbus)
   MIT License, Copyright (c) 2015 Quoc-Viet Nguyen

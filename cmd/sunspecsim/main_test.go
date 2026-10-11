@@ -107,9 +107,44 @@ func TestRunnerLegacy(t *testing.T) {
 	}
 }
 
+// -models all over RTU framing; -models with a list.
+func TestRunnerModels(t *testing.T) {
+	s, out, stop := runSim(t, "-listen", "127.0.0.1:0", "-models", "all", "-rtu", "-unit", "2")
+	r, err := mbtcp.Open(mbtcp.Config{URL: s.dev.URL(), Unit: 2, Timeout: time.Second})
+	if err != nil {
+		t.Fatal(err)
+	}
+	m, err := sunspec.Find(r)
+	if err != nil || len(m.Models) != len(sunspec.Known()) || !strings.HasPrefix(s.dev.URL(), "rtuovertcp://") {
+		t.Fatalf("all models over RTU: %v %v", err, s.dev.URL())
+	}
+	_ = r.Close()
+	if err := stop(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), "all 112 described models") {
+		t.Errorf("output %q", out.String())
+	}
+	s, _, stop = runSim(t, "-listen", "127.0.0.1:0", "-models", "1,705,707")
+	r, err = mbtcp.Dial(s.dev.URL(), 1, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m, err = sunspec.Find(r)
+	if err != nil || len(m.Models) != 3 || !m.Has(707) {
+		t.Errorf("listed models: %+v %v", m, err)
+	}
+	_ = r.Close()
+	if err := stop(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestRunnerFlags(t *testing.T) {
 	for _, args := range [][]string{
 		{"-base", "30000"}, {"-unit", "300"}, {"-unit", "-1"}, {"-listen", "nowhere"}, {"-bogus"}, {"extra"},
+		{"-models", "1,64900"}, {"-models", "x"}, {"-tls-cert", "nope.pem", "-tls-key", "nope.pem", "-tls-ca", "nope.pem"},
+		{"-rtu", "-tls-cert", "a"},
 	} {
 		if err := run(context.Background(), args, &bytes.Buffer{}, nil); err == nil {
 			t.Errorf("%v accepted", args)
