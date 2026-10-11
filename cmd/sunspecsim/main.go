@@ -13,9 +13,12 @@
 // With -vary, the inverter's output power changes at that interval. With
 // -models all the device holds every described SunSpec model (nested
 // curve groups included) with made-up values, with -models 1,705 just
-// those. -rtu speaks Modbus RTU framing over TCP (as a serial gateway);
-// -tls-cert, -tls-key and -tls-ca serve Modbus TCP over TLS with client
-// certificates.
+// those. With -models der it is an IEEE 1547-2018 inverter (models 701 to
+// 715) whose output follows its limits, power factor and adopted curves
+// against the grid voltage and frequency given with -grid-v and -grid-hz.
+// -rtu speaks Modbus RTU framing over TCP (as a serial gateway), -ascii
+// Modbus ASCII framing; -tls-cert, -tls-key and -tls-ca serve Modbus TCP
+// over TLS with client certificates.
 package main
 
 import (
@@ -59,8 +62,11 @@ func run(ctx context.Context, args []string, out io.Writer, ready func(*sim.Devi
 	base := fs.Int("base", 40000, "address of the SunSpec marker: 40000, 50000 or 0")
 	legacy := fs.Bool("legacy", false, "use the controls model 123 instead of 704 and 715")
 	vary := fs.Duration("vary", 0, "change the output power at this interval (0: never)")
-	models := fs.String("models", "demo", "demo (the demo inverter), all (every described model), or model IDs (1,705,707) with made-up values")
+	models := fs.String("models", "demo", "demo (the demo inverter), der (an IEEE 1547-2018 inverter whose output follows its settings and curves), all (every described model), or model IDs (1,705,707) with made-up values")
+	gridV := fs.Float64("grid-v", 0, "with -models der: the simulated grid voltage in V (0: nominal, 230 V)")
+	gridHz := fs.Float64("grid-hz", 0, "with -models der: the simulated grid frequency (0: nominal, 50 Hz)")
 	rtu := fs.Bool("rtu", false, "speak Modbus RTU framing over TCP (as a serial gateway) instead of Modbus TCP")
+	asc := fs.Bool("ascii", false, "speak Modbus ASCII framing over TCP instead of Modbus TCP")
 	tlsCert := fs.String("tls-cert", "", "serve Modbus TCP over TLS with this certificate PEM file (with -tls-key and -tls-ca)")
 	tlsKey := fs.String("tls-key", "", "the TLS certificate's key PEM file")
 	tlsCA := fs.String("tls-ca", "", "CA PEM file client certificates must chain to")
@@ -85,8 +91,14 @@ func run(ctx context.Context, args []string, out io.Writer, ready func(*sim.Devi
 		controls = "123"
 	}
 	list := fmt.Sprintf("models 1, 103, 120, 160, %s, 64900", controls)
+	der := false
 	switch *models {
 	case "demo":
+	case "der":
+		d := sim.DERInverter(sim.DEROptions{Base: uint16(*base)})
+		demo = sim.Demo{Image: d.Image}
+		der = true
+		what, list = "SunSpec DER inverter", "models 1, 701, 702, 704, 705, 706, 711, 712, 715; output follows its settings"
 	case "all":
 		im, _, err := sim.AllModels(uint16(*base))
 		if err != nil {
@@ -115,10 +127,13 @@ func run(ctx context.Context, args []string, out io.Writer, ready func(*sim.Devi
 	if *unit != 0 {
 		units = append(units, uint8(*unit))
 	}
-	opts := sim.Options{Listen: *listen, Units: units, RTU: *rtu}
+	opts := sim.Options{Listen: *listen, Units: units, RTU: *rtu, ASCII: *asc}
+	if *rtu && *asc {
+		return errors.New("-rtu and -ascii do not go together")
+	}
 	if *tlsCert != "" || *tlsKey != "" || *tlsCA != "" {
-		if *rtu {
-			return errors.New("-rtu and TLS do not go together")
+		if *rtu || *asc {
+			return errors.New("-rtu or -ascii and TLS do not go together")
 		}
 		pair, err := tls.LoadX509KeyPair(*tlsCert, *tlsKey)
 		if err != nil {
@@ -139,6 +154,11 @@ func run(ctx context.Context, args []string, out io.Writer, ready func(*sim.Devi
 		return err
 	}
 	defer dev.Close()
+	if der {
+		if _, err := sim.Follow(dev, sim.FollowOptions{Grid: sim.Grid{V: *gridV, Hz: *gridHz}}); err != nil {
+			return err
+		}
+	}
 	unitText := "every unit"
 	if *unit != 0 {
 		unitText = fmt.Sprintf("unit %d", *unit)

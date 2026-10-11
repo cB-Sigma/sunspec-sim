@@ -5,10 +5,10 @@ This module is licensed under the Apache License, Version 2.0 (LICENSE).
 
 The code was written for SigmaM2M, a oneM2M platform, from the public
 SunSpec documents (PROVENANCE.md). It contains no code from other
-projects. The source file that comes from SigmaM2M (sim/sim.go) carries
-no per-file copyright header, the convention of the code it comes from;
-the copyright line above covers it. Files added for this module carry
-"Copyright 2026 Abhinav Gautam" and "SPDX-License-Identifier: Apache-2.0".
+projects. The code that came from SigmaM2M (the image and server of
+sim/sim.go) moved in v0.3.0 to the sunspec module's device package; every
+file here carries "Copyright 2026 Abhinav Gautam" and
+"SPDX-License-Identifier: Apache-2.0".
 
 SunSpec model definitions
 -------------------------
@@ -36,17 +36,19 @@ Dependencies
 ------------
 
 github.com/cB-Sigma/sunspec (Apache-2.0, Copyright 2026 Abhinav Gautam)
-  The model tables, and the reader the tests drive.
+  The model tables, the device package that lays out and serves the
+  map (v0.3.0 and later), and the reader the tests drive.
 
 github.com/simonvetter/modbus v1.6.4
   MIT License, Copyright (c) 2019 Simon Vetter
-  The Modbus TCP and TLS server the simulator runs on (RTU framing is
-  the simulator's own).
+  The Modbus TCP and TLS server, through the sunspec module's device
+  package (RTU and ASCII framing are that package's own); the tests use
+  its client too.
 
-github.com/goburrow/serial v0.1.0 (required by simonvetter/modbus)
+github.com/goburrow/serial v0.1.0 (required by simonvetter/modbus and
+the sunspec module)
   MIT License, Copyright (c) 2015 Quoc-Viet Nguyen
-  Linked in through simonvetter/modbus; this module does not use it
-  directly.
+  Linked in through them; this module does not use it directly.
 
 The Go standard library (BSD-3-Clause, Copyright The Go Authors).
 

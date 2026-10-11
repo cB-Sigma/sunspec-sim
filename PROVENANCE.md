@@ -27,6 +27,17 @@ sunspec module. No code was ported or copied from another implementation.
   `sim/sim.go` (the Device part rewritten around one request path for
   both framings), the new command flags, and their tests;
   `NotImplemented` now lays models out through `Build`.
+- v0.3.0 (2026-10-11): `sim/build.go` and `sim/notimpl.go` were moved
+  (not copied) to the sunspec module's `device` package, and the image
+  and server parts of `sim/sim.go` were split out there; `sim/sim.go`
+  was rewritten as thin wrappers and aliases plus the faults (now the
+  device's request hook). `sim/der.go` (`DERInverter`), `sim/follow.go`
+  (`Follow`) and their tests were written for this module, the tests
+  first. The curve-following rules are our own reading of the published
+  7xx model definitions and of IEEE 1547-2018's function names
+  (volt-var, volt-watt, frequency droop, watt-var, constant power
+  factor); no specification text is reproduced and no other
+  implementation was consulted.
 
 ## Sources
 
@@ -37,7 +48,8 @@ sunspec module. No code was ported or copied from another implementation.
 | Point layout of every model, nested groups (sim/build.go) | The SunSpec model definitions, through the tables of github.com/cB-Sigma/sunspec; values encoded by its `EncodePoint` |
 | Exceptions and faults (sim/sim.go) | The Modbus application protocol's exception codes 1 to 6, 8, 10 and 11 |
 | RTU framing (sim/sim.go) | The Modbus over serial line framing: request lengths per function, CRC-16 (polynomial 0xA001, low byte first) |
-| Modbus TCP and TLS server | github.com/simonvetter/modbus |
+| Modbus TCP and TLS server | github.com/simonvetter/modbus, through github.com/cB-Sigma/sunspec/device (v0.3.0 and later; the RTU and ASCII framing moved there too) |
+| Acting on settings and curves (sim/follow.go, sim/der.go) | The SunSpec definitions of models 701 to 715 (point names, units, enums, the adopt request and result points); the function names of IEEE 1547-2018 as the definitions use them; the arithmetic (piecewise-linear curves, droop as excess frequency over nominal times the gain) is our own |
 
 No specification text is included; comments cite sections in our own
 words.
@@ -45,7 +57,8 @@ words.
 ## Test data
 
 - `sim.DemoInverter` and `cmd/sunspecsim`: made-up identity ("Example
-  Solar", "ES-10K-3P", "DEMO000001") and values.
+  Solar", "ES-10K-3P", "DEMO000001") and values; `sim.DERInverter`:
+  made-up identity ("ES-10K-DER", "DER0000001"), ratings and curves.
 - `sunspec_test.go`: an inverter image laid out by hand from the model
   definitions, using a real manufacturer's name and model name as text
   only; the serial number and register values are made up.

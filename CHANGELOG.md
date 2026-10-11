@@ -3,6 +3,33 @@
 All notable changes to this module. Versions follow semantic versioning;
 before v1 the API may change in minor versions.
 
+## v0.3.0 (2026-10-11)
+
+Needs github.com/cB-Sigma/sunspec v0.3.0. Backwards compatible with
+v0.2.0: the moved names stay in `sim`.
+
+- The image builder and the Modbus serving moved to the sunspec module's
+  `device` package; `sim.Image` and `sim.Options` are aliases of its
+  types, `Build`, `Example`, `NotImplemented`, `AllModels`, `Str`,
+  `Filled`, `NewImage`, `NewDevice`, `Start` and `StartOptions` call it,
+  and `sim.Device` embeds a `device.Device` (its methods and hooks) and
+  adds the faults, which stay here.
+- The device acts on its settings: `Follow` makes the outputs of model
+  701 (and 103) follow 704's limit, setpoint and power factor, adopted
+  volt-var (705), volt-watt (706), frequency droop (711) and watt-var
+  (712) curves, and 715's stop, against a simulated grid (`Grid`,
+  `SetGrid`); adopt requests copy the stored curve over the first one
+  and set the adopt result (COMPLETED, or FAILED for a curve whose
+  points do not rise).
+- `DERInverter`: an IEEE 1547-2018 demo inverter (1, 701, 702, 704,
+  705, 706, 711, 712, 715) with three stored curves per curve model.
+- Modbus ASCII framing over TCP (`Options.ASCII`) and on a byte stream
+  (`ServeASCII`).
+- `cmd/sunspecsim`: `-models der`, `-grid-v`, `-grid-hz`, `-ascii`.
+- Interop: pysunspec2 1.3.6 adopts and enables a volt-var curve and sets
+  the output limit on the DER demo; its next scan reads the output
+  following them.
+
 ## v0.2.0 (2026-10-11)
 
 Needs github.com/cB-Sigma/sunspec v0.2.0. Backwards compatible with
