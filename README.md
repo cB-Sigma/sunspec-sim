@@ -1,0 +1,165 @@
+# sunspec-sim
+
+A simulated SunSpec device over Modbus TCP in Go, for testing SunSpec
+clients without an inverter.
+
+[![Go Reference](https://pkg.go.dev/badge/github.com/cB-Sigma/sunspec-sim.svg)](https://pkg.go.dev/github.com/cB-Sigma/sunspec-sim) [![test](https://github.com/cB-Sigma/sunspec-sim/actions/workflows/test.yml/badge.svg)](https://github.com/cB-Sigma/sunspec-sim/actions/workflows/test.yml) [![Licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-blue.svg)](LICENSE) [![Go](https://img.shields.io/badge/go-1.22-00ADD8.svg)](go.mod)
+
+The simulator serves a SunSpec register map laid out register by
+register, as an inverter publishes it: the "SunS" marker at 40000, 50000
+or 0, then the models and the end model. It refuses reads outside the map
+and writes to registers that are not writable with Modbus exception 2,
+answers only the units it is given, can keep a different value from the
+one written (an inverter that clamps a setpoint) and logs every write. A
+ready-made 10 kW demo inverter has the common, inverter, nameplate, MPPT
+and DER control models. It runs in-process or from the command line, and
+is built on [sunspec](https://github.com/cB-Sigma/sunspec)'s model
+tables and github.com/simonvetter/modbus. Written for SigmaM2M, a oneM2M
+platform; it has no dependency on it.
+
+## What is simulated
+
+| Package | What it does |
+|---|---|
+| `sim` | `NewImage(base)`, then `Model(id, data)` per model and `End`; `Writable` marks registers that take writes; `Str`, `Filled` and `NotImplemented` (every point of a described model at its type's not-implemented value) build model data; `Start(image, listen, units...)` serves it (`Addr`, `URL`, `Close`); `Get` and `Set` read and change registers as the device would, `SetKeep` makes it keep another value than the one written, `WriteLog` lists the writes. `DemoInverter` builds the demo |
+| `cmd/sunspecsim` | Serves the demo inverter |
+
+The demo inverter (`DemoInverter`): common model 1, three-phase inverter
+103, nameplate 120, MPPT 160 with two inputs, the IEEE 1547-2018 DER
+controls 704 and 715 (or the older controls model 123 with `Legacy`), a
+vendor model 64900 and the end model. The control setpoints and enables
+are writable; every point the demo does not implement holds its
+not-implemented value.
+
+Not simulated: Modbus RTU and Modbus over TLS, timing, models other than
+those you lay out, the device acting on a setpoint (a written limit is
+kept, not applied to the output power).
+
+## Install
+
+```
+go get github.com/cB-Sigma/sunspec-sim@latest
+```
+
+Requires Go 1.22 or later. The command:
+
+```
+go install github.com/cB-Sigma/sunspec-sim/cmd/sunspecsim@latest
+```
+
+## Command line
+
+```
+sunspecsim -listen 127.0.0.1:5020 -unit 1 -base 40000 -vary 5s
+sunspecsim -listen 127.0.0.1:5020 -unit 126 -base 50000 -legacy
+```
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `-listen` | `127.0.0.1:5020` | address to serve Modbus TCP on (port 0: a free port) |
+| `-unit` | `0` | the only unit to answer, 1 to 247 (0: every unit) |
+| `-base` | `40000` | address of the SunSpec marker: 40000, 50000 or 0 |
+| `-legacy` | off | the controls model 123 instead of 704 and 715 |
+| `-vary` | `0` | change the output power at this interval (0: never) |
+
+## In Go tests
+
+From `Example` in example_test.go:
+
+```go
+demo := sim.DemoInverter(sim.DemoOptions{Base: 40000})
+dev, err := sim.Start(demo.Image, "127.0.0.1:0")
+defer dev.Close()
+
+r, err := mbtcp.Dial(dev.URL(), 1, 2*time.Second)
+m, err := sunspec.Find(r) // models 1, 103, 120, 160, 704, 715, 64900
+```
+
+A map of your own:
+
+```go
+im := sim.NewImage(40000)
+im.Model(1, common)                    // 66 registers
+inv := sim.NotImplemented(103)         // all 50 points not implemented
+inv[12], inv[13] = 980, 1              // W = 980 × 10^1
+a := im.Model(103, inv)
+im.Writable(a + 12)
+im.End()
+dev, err := sim.Start(im, "", 1)       // unit 1 only
+dev.SetKeep(func(addr, v uint16) uint16 { return min(v, 900) })
+```
+
+## Documentation
+
+Reference: https://pkg.go.dev/github.com/cB-Sigma/sunspec-sim
+
+## Testing
+
+```
+go vet ./...
+go test -race ./...
+```
+
+The tests at the module root are the sunspec module's map, control and
+example tests over Modbus TCP against the simulator; `sim` and
+`cmd/sunspecsim` test the simulator and the command. The simulator and the
+sunspec reader are written by the same author from the same documents,
+so these tests show the two agree; the independent check is below.
+
+`interop/` is a nested module with its own go.mod. Its tests run
+pysunspec2 in Docker and are skipped unless `SIGMA_SUNSPEC_INTEROP=1` is
+set; they need network access for the image and the package:
+
+```
+cd interop && SIGMA_SUNSPEC_INTEROP=1 go test -v ./...
+```
+
+### Interop tested against
+
+- pysunspec2 1.3.6 (the SunSpec Alliance's Python library, Apache-2.0,
+  from PyPI) in python:3.12.10-slim on Docker Desktop for macOS (arm64),
+  2026-10-11, reading the simulator over Modbus TCP from the container
+  (`interop`):
+  - the demo inverter at 40000: pysunspec2's scan found the chain (1, 103,
+    120, 160, 704, 715 and the vendor model 64900) at the simulator's
+    addresses with no model errors, and agreed on 37 values with their
+    scale factors (identity, currents, voltages, power, frequency,
+    energy, temperature, state, nameplate, both MPPT inputs, the 704 and
+    715 controls) and on 10 points the demo does not implement; it wrote
+    the output limit (60 %), its enable, the power factor (0.95) and its
+    excitation, and the stop command, and the simulator kept exactly
+    those registers; its write to the read-only inverter power was
+    refused;
+  - the legacy demo (model 123) at 50000 answering unit 126 only: found,
+    decoded, and the limit (75.5 %), its enable and the disconnect written;
+  - a map at address 0 with models 101, 111 (float32), 201, 701, 713 and
+    122 laid out at the sunspec module's offsets: pysunspec2, working from
+    its own definitions, agreed on 35 values (negative integers, 32- and
+    64-bit values, floats, strings) and on 12 not-implemented points.
+- Found on the way and fixed: the demo left 0xFFFF in signed points it did
+  not implement, which pysunspec2 rightly read as -1 (see CHANGELOG.md).
+- Not yet: a commercial SunSpec test tool, a real inverter's firmware
+  quirks, Modbus RTU.
+
+## Related repositories
+
+- [sunspec](https://github.com/cB-Sigma/sunspec): the SunSpec reader and
+  DER controls the simulator is built for.
+
+## Status
+
+v0.x. The API may change before v1.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Security
+
+See [SECURITY.md](SECURITY.md).
+
+## Licence
+
+Apache-2.0 (see [LICENSE](LICENSE)). Copyright 2026 Abhinav Gautam.
+[NOTICE](NOTICE) names the dependencies, the source of the model
+definitions and the trademarks used.

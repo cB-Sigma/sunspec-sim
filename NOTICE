@@ -1,0 +1,66 @@
+sunspec-sim (a simulated SunSpec device over Modbus TCP, in Go)
+Copyright 2026 Abhinav Gautam
+
+This module is licensed under the Apache License, Version 2.0 (LICENSE).
+
+The code was written for SigmaM2M, a oneM2M platform, from the public
+SunSpec documents (PROVENANCE.md). It contains no code from other
+projects. The source file that comes from SigmaM2M (sim/sim.go) carries
+no per-file copyright header, the convention of the code it comes from;
+the copyright line above covers it. Files added for this module carry
+"Copyright 2026 Abhinav Gautam" and "SPDX-License-Identifier: Apache-2.0".
+
+SunSpec model definitions
+-------------------------
+
+The simulator holds no model definitions of its own: NotImplemented and
+the tests take point offsets and types from the tables of
+github.com/cB-Sigma/sunspec, which are derived from the SunSpec
+Alliance's model definitions (github.com/sunspec/models, commit
+90b4a331dcca1d6eac69c1bead952fddcc5852e0, Apache License 2.0); the
+sunspec module's NOTICE gives the details and the copyright position.
+The demo inverter's register layout follows the same definitions.
+
+Trademarks
+----------
+
+SunSpec is a trademark of the SunSpec Alliance. Modbus is a trademark of
+Schneider Electric, licensed to the Modbus Organization. Fronius and Symo
+(test data) are trademarks of their owner. They are used only to say
+which register maps and protocols the simulator follows. This module is
+not made, endorsed, certified or supported by the SunSpec Alliance, the
+Modbus Organization or any device maker, and is not affiliated with them.
+
+Dependencies
+------------
+
+github.com/cB-Sigma/sunspec (Apache-2.0, Copyright 2026 Abhinav Gautam)
+  The model tables, and the reader the tests drive.
+
+github.com/simonvetter/modbus v1.6.4
+  MIT License, Copyright (c) 2019 Simon Vetter
+  The Modbus TCP server the simulator runs on.
+
+github.com/goburrow/serial v0.1.0 (required by simonvetter/modbus)
+  MIT License, Copyright (c) 2015 Quoc-Viet Nguyen
+  Linked in through simonvetter/modbus; this module does not use it
+  directly.
+
+The Go standard library (BSD-3-Clause, Copyright The Go Authors).
+
+Interop tests (nested module interop/, not part of the simulator)
+-----------------------------------------------------------------
+
+The tests install pysunspec2 1.3.6 from PyPI (Apache License 2.0, by the
+SunSpec Alliance) into a python:3.12.10-slim container while they run.
+Neither pysunspec2 nor the image is redistributed, and no pysunspec2 code
+is in this repository; testdata/pysunspec2_client.py is our own script
+that calls it.
+
+Test data
+---------
+
+The demo inverter (sim.DemoInverter, cmd/sunspecsim) uses made-up
+identity and values ("Example Solar", "ES-10K-3P", "DEMO000001"). The
+inverter image in sunspec_test.go uses a real manufacturer's name and
+model name as text only, with made-up serial and register values.
